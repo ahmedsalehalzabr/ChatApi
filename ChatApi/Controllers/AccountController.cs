@@ -21,7 +21,7 @@ namespace ChatApi.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<AppUser>> Regsiter(RegisterDto registerDto)
+        public async Task<ActionResult<AppUser>> Regsiter([FromBody] RegisterDto registerDto)
         {
             if (await UserExists(registerDto.Username)) return BadRequest("Username is taken");
             using var hmac = new HMACSHA512();
@@ -36,9 +36,29 @@ namespace ChatApi.Controllers
             await _db.SaveChangesAsync();
             return Ok(user);
         }
+
+        [HttpPost("login")]
+        public async Task<ActionResult<AppUser>> Login(LoginDto loginDto)
+        {
+            var user = await _db.Users.SingleOrDefaultAsync(x => 
+            x.UserName == loginDto.Username);
+            if (user == null) return Unauthorized("invalid username");
+
+            using var hmac = new HMACSHA512(user.PasswordSalt);
+
+            var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
+
+            for (int i = 0; i < computedHash.Length; i++)
+                    {
+                if (computedHash[i] != user.PasswordHash[i]) return Unauthorized("invalid password");
+            }
+            return user;
+        }
+
         private async Task<bool> UserExists(string username)
         {
             return await _db.Users.AnyAsync(x => x.UserName == username.ToLower());
         }
+
     }
 }
