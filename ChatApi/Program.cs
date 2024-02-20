@@ -1,6 +1,10 @@
 using ChatApi.Data;
 using ChatApi.Interfaces;
+using ChatApi.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +19,21 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddCors();
 
-builder.Services.AddScoped<ITokenService, ITokenService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+//middleware
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["TokenKey"])),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+        };
+    });
 
 builder.Services.AddSwaggerGen();
 

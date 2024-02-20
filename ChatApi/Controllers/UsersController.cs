@@ -1,13 +1,16 @@
 ﻿using ChatApi.Data;
 using ChatApi.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatApi.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _db;
@@ -16,7 +19,7 @@ namespace ChatApi.Controllers
         {
             _db = db;
         }
-
+        [AllowAnonymous]
         [HttpGet]
 
         public async Task< ActionResult<IEnumerable<AppUser>>> GetUsers()

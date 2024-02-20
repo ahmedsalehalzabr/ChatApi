@@ -1,6 +1,7 @@
 ﻿using ChatApi.Data;
 using ChatApi.DTOs;
 using ChatApi.Entities;
+using ChatApi.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,16 +16,19 @@ namespace ChatApi.Controllers
     {
         private readonly AppDbContext _db;
 
-        public AccountController(AppDbContext db) 
+        private readonly ITokenService _tokenService;
+
+        public AccountController(AppDbContext db, ITokenService tokenService) 
         {
             _db = db;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<AppUser>> Regsiter([FromBody] RegisterDto registerDto)
+        public async Task<ActionResult<UserDto>> Regsiter([FromBody] RegisterDto registerDto)
         {
             if (await UserExists(registerDto.Username)) return BadRequest("Username is taken");
-            using var hmac = new HMACSHA512();
+            using var hmac = new HMACSHA256();
             var user = new AppUser
             {
                 UserName = registerDto.Username.ToLower(),
@@ -34,17 +38,21 @@ namespace ChatApi.Controllers
 
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
-            return Ok(user);
+            return new UserDto
+            {
+               Username = user.UserName,
+               Token = _tokenService.CreateToken(user)
+            };
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<AppUser>> Login(LoginDto loginDto)
+        public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
         {
             var user = await _db.Users.SingleOrDefaultAsync(x => 
             x.UserName == loginDto.Username);
             if (user == null) return Unauthorized("invalid username");
 
-            using var hmac = new HMACSHA512(user.PasswordSalt);
+            using var hmac = new HMACSHA256(user.PasswordSalt);
 
             var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password));
 
@@ -52,7 +60,11 @@ namespace ChatApi.Controllers
                     {
                 if (computedHash[i] != user.PasswordHash[i]) return Unauthorized("invalid password");
             }
-            return user;
+            return new UserDto
+            {
+                Username = user.UserName,
+                Token = _tokenService.CreateToken(user)
+            };
         }
 
         private async Task<bool> UserExists(string username)
