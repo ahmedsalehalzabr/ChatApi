@@ -1,5 +1,6 @@
 using ChatApi.Data;
 using ChatApi.Interfaces;
+using ChatApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +16,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddCors();
 
-builder.Services.AddScoped<ITokenService, ITokenService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddSwaggerGen();
 
